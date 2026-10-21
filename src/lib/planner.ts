@@ -58,7 +58,7 @@ export function generatePlan(
     const topic = rotation[i % rotation.length]!;
     const n = counters[topic] ?? 0;
     counters[topic] = n + 1;
-    plan.push({ date, topic, minutes: minutesPerDay, focus: FOCUS[topic][n % FOCUS[topic].length] });
+    plan.push({ date, topic, minutes: minutesPerDay, focus: FOCUS[topic][n % FOCUS[topic].length]! });
   }
   return { plan };
 }

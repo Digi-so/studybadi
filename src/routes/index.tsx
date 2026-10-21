@@ -89,7 +89,7 @@ function Dashboard() {
   );
 }
 
-function Stat({ label, value, hint }: { label: string; value: string; hint?: string }) {
+function Stat({ label, value, hint }: { label: string; value: string; hint?: string | undefined }) {
   return (
     <Panel>
       <div className="text-sm text-muted-foreground">{label}</div>
