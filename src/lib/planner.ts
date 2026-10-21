@@ -55,10 +55,10 @@ export function generatePlan(
       plan.push({ date, topic: "Full practice quiz & review", minutes: minutesPerDay, focus: "Take the practice quiz, then revise any missed topics" });
       continue;
     }
-    const topic = rotation[i % rotation.length];
+    const topic = rotation[i % rotation.length]!;
     const n = counters[topic] ?? 0;
     counters[topic] = n + 1;
-    plan.push({ date, topic, minutes: minutesPerDay, focus: FOCUS[topic][n % FOCUS[topic].length] });
+    plan.push({ date, topic, minutes: minutesPerDay, focus: FOCUS[topic][n % FOCUS[topic].length]! });
   }
   return { plan };
 }

@@ -17,7 +17,7 @@ describe("quiz scoring", () => {
     const answers = QUIZ.map((q, i) => (i === 0 ? q.answer : null));
     const r = scoreQuiz(QUIZ, answers);
     expect(r.correct).toBe(1);
-    const t = r.topics.find((x) => x.topic === QUIZ[0].topic)!;
+    const t = r.topics.find((x) => x.topic === QUIZ[0]!.topic)!;
     expect(t.correct).toBe(1);
   });
 });

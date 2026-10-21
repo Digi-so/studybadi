@@ -33,7 +33,7 @@ function Quiz() {
   const [confirm, setConfirm] = useState(false);
   const [, setAttempts, { error: saveError }] = useAttempts();
 
-  const q = QUIZ[idx];
+  const q = QUIZ[idx]!;
   const answeredCount = answers.filter((a) => a !== null).length;
   const result = scoreQuiz(QUIZ, answers);
 

@@ -25,7 +25,7 @@ function Flashcards() {
   const [flipped, setFlipped] = useState(false);
   const [status, setStatus, { error }] = useCardStatus();
 
-  const card = FLASHCARDS[order[pos]];
+  const card = FLASHCARDS[order[pos]!]!;
   const known = Object.values(status).filter((s) => s === "known").length;
   const review = Object.values(status).filter((s) => s === "review").length;
 
@@ -37,7 +37,7 @@ function Flashcards() {
     const a = [...order];
     for (let i = a.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
-      [a[i], a[j]] = [a[j], a[i]];
+      [a[i], a[j]] = [a[j]!, a[i]!];
     }
     setOrder(a);
     setPos(0);
