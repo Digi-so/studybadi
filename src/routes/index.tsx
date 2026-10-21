@@ -1,11 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowRight, BookOpen, CalendarDays, Layers, MessageCircle, Target } from "lucide-react";
-import { AppShell as _ } from "@/components/AppShell";
-import { Panel, btnPrimary } from "@/components/AppShell";
+import { Panel } from "@/components/AppShell";
 import { useAttempts, useCardStatus, useDailyGoal } from "@/lib/app-state";
 import { aggregateTopics, averageScore } from "@/lib/quiz";
-
-void _;
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -88,7 +85,6 @@ function Dashboard() {
           </Link>
         ))}
       </div>
-      <div className="hidden"><Link to="/quiz" className={btnPrimary} /></div>
     </div>
   );
 }
