@@ -27,8 +27,6 @@ export const Route = createFileRoute("/flashcards")({
 
 type DeckCard = { id: string; term: string; definition: string; category: string; custom: boolean };
 const BUILT_IN = "Built-in";
-const MAX_TERM = 80;
-const MAX_DEF = 400;
 
 function Flashcards() {
   const [custom, setCustom, { error: customError }] = useCustomCards();
@@ -166,6 +164,14 @@ function Flashcards() {
           {(error || customError) && <p role="alert" className="mt-3 text-sm text-destructive">Your browser blocked saving, so changes won't persist after refresh.</p>}
         </div>
       </div>
+
+      <AiGeneratePanel categories={categories} existingTerms={new Set(all.map((c) => c.term.toLowerCase()))}
+        onAdd={(cards, category) =>
+          setCustom((prev) => [
+            ...prev,
+            ...cards.map((c) => ({ id: `c-${crypto.randomUUID()}`, term: c.term, definition: c.definition, category })),
+          ])
+        } />
 
       <Panel>
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
