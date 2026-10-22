@@ -275,3 +275,127 @@ function CardForm({ initial, categories, onSave, onCancel }: {
     </form>
   );
 }
+
+function sanitizeCategory(c: string): string {
+  const t = c.trim().slice(0, 40) || "My notes";
+  return t.toLowerCase() === BUILT_IN.toLowerCase() || t === "All" || t === "My cards" ? "My notes" : t;
+}
+
+const AI_COUNTS = [5, 8, 12];
+
+function AiGeneratePanel({ categories, existingTerms, onAdd }: {
+  categories: string[];
+  existingTerms: Set<string>;
+  onAdd: (cards: GeneratedCard[], category: string) => void;
+}) {
+  const [source, setSource] = useState("");
+  const [count, setCount] = useState(8);
+  const [category, setCategory] = useState("My notes");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [results, setResults] = useState<GeneratedCard[] | null>(null);
+  const [picked, setPicked] = useState<Set<number>>(() => new Set());
+
+  const generate = async () => {
+    if (!source.trim() || busy) return;
+    setError(null);
+    setBusy(true);
+    try {
+      const res = await generateFlashcards({ data: { source, count, category: sanitizeCategory(category) } });
+      if (res.error) {
+        setError(res.error);
+        setResults(null);
+      } else {
+        setResults(res.cards);
+        setPicked(new Set(res.cards.map((_, i) => i)));
+      }
+    } catch {
+      setError("Something went wrong while generating cards. Please try again.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const toggle = (i: number) =>
+    setPicked((prev) => {
+      const next = new Set(prev);
+      if (next.has(i)) next.delete(i);
+      else next.add(i);
+      return next;
+    });
+
+  const addSelected = () => {
+    if (!results) return;
+    const cards = results.filter((_, i) => picked.has(i));
+    if (cards.length) onAdd(cards, sanitizeCategory(category));
+    setResults(null);
+    setPicked(new Set());
+    setSource("");
+  };
+
+  const input = "w-full rounded-lg border bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+  const selected = results?.filter((_, i) => picked.has(i)).length ?? 0;
+
+  return (
+    <Panel>
+      <div className="mb-4">
+        <h2 className="flex items-center gap-2 text-lg font-semibold"><Sparkles className="size-5 text-primary" /> Generate with AI</h2>
+        <p className="text-sm text-muted-foreground">Paste study notes or name a topic, and Lovable AI turns it into flashcards. Review them before they're added.</p>
+      </div>
+
+      <textarea rows={5} value={source} maxLength={MAX_SOURCE_CHARS} disabled={busy}
+        onChange={(e) => setSource(e.target.value)}
+        placeholder="e.g. Paste your notes about Azure security, or just type a topic like 'Networking basics'"
+        className={input} />
+      <div className="mt-3 grid gap-3 sm:grid-cols-[auto_1fr_auto] sm:items-end">
+        <div>
+          <label htmlFor="ai-count" className="text-sm font-medium">How many cards</label>
+          <select id="ai-count" value={count} onChange={(e) => setCount(Number(e.target.value))}
+            className={`mt-1 ${input} ${busy ? "opacity-60" : ""}`} disabled={busy}>
+            {AI_COUNTS.map((n) => <option key={n} value={n}>{n}</option>)}
+          </select>
+        </div>
+        <div>
+          <label htmlFor="ai-cat" className="text-sm font-medium">Category for new cards</label>
+          <input id="ai-cat" list="ai-cats" value={category} maxLength={40} disabled={busy}
+            onChange={(e) => setCategory(e.target.value)} placeholder="e.g. Security" className={`mt-1 ${input}`} />
+          <datalist id="ai-cats">{[...categories, "My notes"].map((c) => <option key={c} value={c} />)}</datalist>
+        </div>
+        <button onClick={generate} disabled={!source.trim() || busy} className={btnPrimary}>
+          {busy ? <><Loader2 className="size-4 animate-spin" /> Thinking…</> : <><Sparkles className="size-4" /> Generate cards</>}
+        </button>
+      </div>
+
+      {error && <p role="alert" className="mt-3 text-sm text-destructive">{error}</p>}
+
+      {results && (
+        <div className="mt-4">
+          <div className="mb-2 flex items-center justify-between">
+            <p className="text-sm font-medium">{results.length} cards generated — untick any you don't want.</p>
+            <button onClick={() => { setResults(null); setPicked(new Set()); }} className={btnSecondary}><X className="size-4" /> Discard</button>
+          </div>
+          <ul className="divide-y rounded-xl border">
+            {results.map((c, i) => {
+              const dupe = existingTerms.has(c.term.toLowerCase());
+              return (
+                <li key={`${c.term}-${i}`} className="flex items-start gap-3 p-3">
+                  <input type="checkbox" checked={picked.has(i)} onChange={() => toggle(i)} aria-label={`Include ${c.term}`}
+                    className="mt-1 size-4 accent-[var(--primary)]" />
+                  <div className="min-w-0 flex-1">
+                    <p className="break-words font-medium">{c.term}{dupe && <span className="ml-2 rounded-full bg-muted px-2 py-0.5 text-xs font-normal text-muted-foreground">already in your deck</span>}</p>
+                    <p className="break-words text-sm text-muted-foreground">{c.definition}</p>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+          <div className="mt-3 flex justify-end">
+            <button onClick={addSelected} disabled={!selected} className={btnPrimary}>
+              <Check className="size-4" /> Add {selected} {selected === 1 ? "card" : "cards"} to my cards
+            </button>
+          </div>
+        </div>
+      )}
+    </Panel>
+  );
+}
