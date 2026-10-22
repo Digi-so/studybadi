@@ -1,9 +1,11 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useServerFn } from "@tanstack/react-router";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
-import { Check, ChevronLeft, ChevronRight, Pencil, Plus, RotateCcw, Shuffle, Trash2, X } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, Loader2, Pencil, Plus, RotateCcw, Shuffle, Sparkles, Trash2, X } from "lucide-react";
 import { PageHeader, Panel, btnPrimary, btnSecondary } from "@/components/AppShell";
 import { FLASHCARDS } from "@/data/flashcards";
 import { useCardStatus, useCustomCards, type CustomCard } from "@/lib/app-state";
+import { generateFlashcards } from "@/lib/ai/flashcards.functions";
+import { MAX_DEF, MAX_SOURCE_CHARS, MAX_TERM, type GeneratedCard } from "@/lib/ai/flashcards-shared";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
   AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -13,9 +15,9 @@ export const Route = createFileRoute("/flashcards")({
   head: () => ({
     meta: [
       { title: "Flashcards — AI Study Buddy" },
-      { name: "description", content: "Flip Azure Fundamentals flashcards, create your own, and mark what you know." },
+      { name: "description", content: "Flip Azure Fundamentals flashcards, create your own, turn notes into cards with AI, and mark what you know." },
       { property: "og:title", content: "AZ-900 Flashcards — AI Study Buddy" },
-      { property: "og:description", content: "Built-in and personal Azure flashcards with saved review progress." },
+      { property: "og:description", content: "Built-in and personal Azure flashcards, with AI that turns your notes into new cards." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
