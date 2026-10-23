@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 const PREFIX = "asb:";
 const EVENT = "asb-storage";
@@ -34,14 +34,19 @@ export function clearAllStore() {
   }
 }
 
-/** localStorage-backed state. Reads after hydration to avoid SSR mismatches. */
+/** localStorage-backed state. Reads after hydration to avoid SSR mismatches.
+ *  The state updater stays pure (no writes inside it); persistence happens in
+ *  an effect, otherwise the synchronous storage event re-enters setState and
+ *  can apply the same update twice. */
 export function useStored<T>(key: string, fallback: T) {
   const [value, setValue] = useState<T>(fallback);
   const [ready, setReady] = useState(false);
   const [error, setError] = useState(false);
+  const loadedRef = useRef(false);
 
   useEffect(() => {
     setValue(readStore(key, fallback));
+    loadedRef.current = true;
     setReady(true);
     const onChange = (e: Event) => {
       const k = (e as CustomEvent).detail;
@@ -52,13 +57,16 @@ export function useStored<T>(key: string, fallback: T) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key]);
 
+  // Persist after the stored value has been read; skip the initial render so
+  // the fallback never overwrites what is already saved.
+  useEffect(() => {
+    if (!loadedRef.current) return;
+    if (!writeStore(key, value)) setError(true);
+  }, [key, value, ready]);
+
   const update = useCallback(
     (next: T | ((prev: T) => T)) => {
-      setValue((prev) => {
-        const v = typeof next === "function" ? (next as (p: T) => T)(prev) : next;
-        if (!writeStore(key, v)) setError(true);
-        return v;
-      });
+      setValue((prev) => (typeof next === "function" ? (next as (p: T) => T)(prev) : next));
     },
     [key],
   );
