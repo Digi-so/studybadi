@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 const PREFIX = "asb:";
 const EVENT = "asb-storage";
@@ -34,18 +34,29 @@ export function clearAllStore() {
   }
 }
 
-/** localStorage-backed state. Reads after hydration to avoid SSR mismatches. */
+/** localStorage-backed state. Reads after hydration to avoid SSR mismatches.
+ *  Writes happen only inside update(), never in an effect or state updater:
+ *  an effect fires on the initial mount with the pre-read fallback (which
+ *  would wipe saved data) and the synchronous storage event re-enters
+ *  setState, so both can apply or overwrite an update twice. */
 export function useStored<T>(key: string, fallback: T) {
   const [value, setValue] = useState<T>(fallback);
   const [ready, setReady] = useState(false);
   const [error, setError] = useState(false);
+  const valueRef = useRef<T>(fallback);
 
   useEffect(() => {
-    setValue(readStore(key, fallback));
+    const stored = readStore(key, fallback);
+    valueRef.current = stored;
+    setValue(stored);
     setReady(true);
     const onChange = (e: Event) => {
       const k = (e as CustomEvent).detail;
-      if (k === key || k === "*") setValue(readStore(key, fallback));
+      if (k === key || k === "*") {
+        const fresh = readStore(key, fallback);
+        valueRef.current = fresh;
+        setValue(fresh);
+      }
     };
     window.addEventListener(EVENT, onChange);
     return () => window.removeEventListener(EVENT, onChange);
@@ -54,11 +65,10 @@ export function useStored<T>(key: string, fallback: T) {
 
   const update = useCallback(
     (next: T | ((prev: T) => T)) => {
-      setValue((prev) => {
-        const v = typeof next === "function" ? (next as (p: T) => T)(prev) : next;
-        if (!writeStore(key, v)) setError(true);
-        return v;
-      });
+      const v = typeof next === "function" ? (next as (p: T) => T)(valueRef.current) : next;
+      valueRef.current = v;
+      if (!writeStore(key, v)) setError(true);
+      setValue(v);
     },
     [key],
   );
