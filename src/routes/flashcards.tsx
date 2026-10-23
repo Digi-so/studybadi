@@ -167,16 +167,12 @@ function Flashcards() {
       </div>
 
       <AiGeneratePanel categories={categories} existingTerms={new Set(all.map((c) => c.term.toLowerCase()))}
-        onAdd={(cards, category) => {
-          console.log("[diag] onAdd invoked with", cards.length, "cards");
-          setCustom((prev) => {
-            console.log("[diag] setCustom prev size:", prev.length);
-            return [
-              ...prev,
-              ...cards.map((c) => ({ id: `c-${crypto.randomUUID()}`, term: c.term, definition: c.definition, category })),
-            ];
-          });
-        }} />
+        onAdd={(cards, category) =>
+          setCustom((prev) => [
+            ...prev,
+            ...cards.map((c) => ({ id: `c-${crypto.randomUUID()}`, term: c.term, definition: c.definition, category })),
+          ])
+        } />
 
       <Panel>
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
@@ -330,7 +326,6 @@ function AiGeneratePanel({ categories, existingTerms, onAdd }: {
     });
 
   const addSelected = () => {
-    console.log("[diag] addSelected clicked, results:", results?.length, "picked:", picked.size);
     if (!results) return;
     const cards = results.filter((_, i) => picked.has(i));
     if (cards.length) onAdd(cards, sanitizeCategory(category));
