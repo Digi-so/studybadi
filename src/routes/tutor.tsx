@@ -18,7 +18,7 @@ export const Route = createFileRoute("/tutor")({
       { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
-  component: Tutor,
+  component: Tutor, // hmr-probe
 });
 
 type Msg = { role: "user"; text: string } | { role: "tutor"; answer: TutorAnswer };
