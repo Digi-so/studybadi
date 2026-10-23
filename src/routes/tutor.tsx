@@ -1,8 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Info, Loader2, Send } from "lucide-react";
 import { PageHeader, btnPrimary } from "@/components/AppShell";
-import { askDemoTutor, SUGGESTED_PROMPTS, type TutorAnswer } from "@/lib/tutor";
+import { askTutor } from "@/lib/ai/tutor.functions";
+import { SUGGESTED_PROMPTS } from "@/lib/tutor";
+import { MAX_QUESTION_CHARS, type TutorAnswer } from "@/lib/ai/tutor-shared";
 
 export const Route = createFileRoute("/tutor")({
   head: () => ({
@@ -20,26 +23,44 @@ export const Route = createFileRoute("/tutor")({
 
 type Msg = { role: "user"; text: string } | { role: "tutor"; answer: TutorAnswer };
 
+/** Compact plain text of an answer, used as the tutor's side of the conversation history. */
+function answerToHistoryText(a: TutorAnswer): string {
+  return [a.simple, a.keyPoints.join(" ")].filter(Boolean).join(" ").trim();
+}
+
 function Tutor() {
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
+  const askTutorFn = useServerFn(askTutor);
 
   useEffect(() => endRef.current?.scrollIntoView({ behavior: "smooth" }), [msgs, loading]);
 
   async function ask(text: string) {
     const q = text.trim();
     if (!q) return setError("Please type a question first.");
-    if (q.length > 500) return setError("Please keep questions under 500 characters.");
+    if (q.length > MAX_QUESTION_CHARS) {
+      return setError(`Please keep questions under ${MAX_QUESTION_CHARS} characters.`);
+    }
     setError(null);
     setInput("");
-    setMsgs((m) => [...m, { role: "user", text: q }]);
+    const withQuestion = [...msgs, { role: "user" as const, text: q }];
+    setMsgs(withQuestion);
     setLoading(true);
     try {
-      const answer = await askDemoTutor(q);
-      setMsgs((m) => [...m, { role: "tutor", answer }]);
+      const history = withQuestion.slice(0, -1).map((m) =>
+        m.role === "user"
+          ? { role: "user" as const, text: m.text }
+          : { role: "tutor" as const, text: answerToHistoryText(m.answer) },
+      );
+      const { answer, error: fnError } = await askTutorFn({ data: { question: q, history } });
+      if (fnError || !answer) {
+        setError(fnError || "Something went wrong while answering. Please try again.");
+      } else {
+        setMsgs((m) => [...m, { role: "tutor", answer }]);
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong. Please try again.");
     } finally {
@@ -57,7 +78,7 @@ function Tutor() {
       <PageHeader title="AI Tutor" subtitle="Ask about any AZ-900 concept." />
       <div className="mb-4 flex gap-2 rounded-xl border border-primary/30 bg-accent p-3 text-sm text-accent-foreground">
         <Info className="mt-0.5 size-4 shrink-0" />
-        <p><strong>Demo tutor:</strong> answers come from prepared explanations in this app, not from an AI model. A real AI provider can be connected later.</p>
+        <p><strong>AI tutor:</strong> answers are generated for your exact question and follow the chat. AI can make mistakes — double-check important facts against Microsoft Learn.</p>
       </div>
 
       <div className="flex min-h-[420px] flex-col rounded-2xl border bg-card shadow-card">
@@ -81,7 +102,7 @@ function Tutor() {
             ),
           )}
           {loading && (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="size-4 animate-spin" /> Preparing explanation…</div>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="size-4 animate-spin" /> Thinking…</div>
           )}
           <div ref={endRef} />
         </div>
@@ -94,7 +115,7 @@ function Tutor() {
         )}
         <form onSubmit={onSubmit} className="flex gap-2 border-t p-3">
           <label htmlFor="q" className="sr-only">Your question</label>
-          <input id="q" value={input} onChange={(e) => setInput(e.target.value)} placeholder="e.g. What is a resource group?" maxLength={500}
+          <input id="q" value={input} onChange={(e) => setInput(e.target.value)} placeholder="e.g. What is a resource group?" maxLength={MAX_QUESTION_CHARS}
             className="flex-1 rounded-lg border bg-background px-3 py-2.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" />
           <button type="submit" disabled={loading} className={btnPrimary} aria-label="Send">
             {loading ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}<span className="hidden sm:inline">Send</span>
@@ -110,7 +131,7 @@ function AnswerCard({ a }: { a: TutorAnswer }) {
   return (
     <article className="max-w-[95%] rounded-2xl rounded-bl-sm border bg-background p-4 text-sm">
       <div className="mb-2 flex items-center gap-2">
-        <span className="rounded-full bg-accent px-2 py-0.5 text-xs font-semibold text-accent-foreground">{a.source === "demo" ? "Demo response" : "AI response"}</span>
+        <span className="rounded-full bg-accent px-2 py-0.5 text-xs font-semibold text-accent-foreground">AI response</span>
         <h3 className="font-semibold">{a.title}</h3>
       </div>
       <Section title="Simple Explanation">{a.simple}</Section>
