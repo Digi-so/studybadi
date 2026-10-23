@@ -42,7 +42,7 @@ export async function runFlashcardGeneration(
   request: Request,
   input: FlashcardGenerationInput,
 ): Promise<{ cards: { term: string; definition: string }[] }> {
-  const apiKey = process.env.LOVABLE_API_KEY;
+  const apiKey = process.env["LOVABLE_API_KEY"];
   if (!apiKey) throw new Error("Missing AI configuration (LOVABLE_API_KEY).");
 
   const count = clampCardCount(input.count);
