@@ -36,7 +36,13 @@ function Tutor() {
   const endRef = useRef<HTMLDivElement>(null);
   const askTutorFn = useServerFn(askTutor);
 
-  useEffect(() => endRef.current?.scrollIntoView({ behavior: "smooth" }), [msgs, loading]);
+  // Block body on purpose: React calls any non-undefined effect return value
+  // as a cleanup function on unmount, which crashes with "destroy is not a
+  // function" if the expression ever evaluates to something other than a
+  // function or undefined.
+  useEffect(() => {
+    endRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [msgs, loading]);
 
   async function ask(text: string) {
     const q = text.trim();
